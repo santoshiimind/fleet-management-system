@@ -20,6 +20,12 @@ A comprehensive **Python-based fleet management platform** with real-time vehicl
 
 *Real-time fleet dashboard showing vehicle tracking, engine telemetry, fuel levels, and active alerts.*
 
+### 🗺️ Live Fleet Map
+
+![Fleet Map — Live Vehicle Tracking](screenshots/fleet_map.png)
+
+*Interactive Leaflet.js map with real-time vehicle positions, status-coded markers, search, and filtering.*
+
 ---
 
 ## 📌 About
