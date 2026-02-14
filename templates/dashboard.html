@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Management System — Telematics Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f1923;
+            color: #e0e6ed;
+            min-height: 100vh;
+        }
+
+        /* ── Header ────────────────────────────────────── */
+        .header {
+            background: linear-gradient(135deg, #1a2332 0%, #243447 100%);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2d9cdb;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 22px;
+            color: #2d9cdb;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header h1 span { color: #e0e6ed; font-weight: 300; }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: 14px;
+            color: #8899aa;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .live-dot {
+            width: 8px; height: 8px;
+            background: #27ae60;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* ── Stats Cards ───────────────────────────────── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            padding: 24px 32px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1e2d3d 0%, #253545 100%);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2a3a4a;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: #2d9cdb;
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: #6b8299;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .stat-card.active .value { color: #27ae60; }
+        .stat-card.transit .value { color: #2d9cdb; }
+        .stat-card.maintenance .value { color: #f39c12; }
+        .stat-card.alerts .value { color: #e74c3c; }
+
+        /* ── Main Content ──────────────────────────────── */
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            padding: 0 32px 32px;
+        }
+
+        /* ── Vehicle Table ─────────────────────────────── */
+        .panel {
+            background: #1a2836;
+            border-radius: 12px;
+            border: 1px solid #2a3a4a;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #2a3a4a;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header .badge {
+            background: #2d9cdb;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #1e2d3d;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6b8299;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #1e2d3d;
+            font-size: 14px;
+        }
+
+        tr:hover td {
+            background: rgba(45, 156, 219, 0.05);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-active, .status-in_transit { background: rgba(39,174,96,0.2); color: #27ae60; }
+        .status-idle { background: rgba(108,117,125,0.2); color: #8899aa; }
+        .status-maintenance { background: rgba(243,156,18,0.2); color: #f39c12; }
+        .status-out_of_service { background: rgba(231,76,60,0.2); color: #e74c3c; }
+
+        .fuel-bar {
+            width: 60px;
+            height: 8px;
+            background: #2a3a4a;
+            border-radius: 4px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        .fuel-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s;
+        }
+
+        .fuel-high { background: #27ae60; }
+        .fuel-medium { background: #f39c12; }
+        .fuel-low { background: #e74c3c; }
+
+        /* ── Alerts Panel ──────────────────────────────── */
+        .alert-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #1e2d3d;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .alert-item:hover { background: rgba(231,76,60,0.05); }
+
+        .alert-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .alert-critical .alert-icon { background: rgba(231,76,60,0.2); }
+        .alert-warning .alert-icon { background: rgba(243,156,18,0.2); }
+        .alert-info .alert-icon { background: rgba(45,156,219,0.2); }
+
+        .alert-content { flex: 1; }
+        .alert-content .message { font-size: 13px; margin-bottom: 4px; }
+        .alert-content .meta { font-size: 11px; color: #6b8299; }
+
+        /* ── Map Placeholder ───────────────────────────── */
+        .map-container {
+            background: #1a2836;
+            border-radius: 12px;
+            border: 1px solid #2a3a4a;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 32px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-placeholder {
+            text-align: center;
+            color: #4a6177;
+        }
+
+        .map-placeholder .icon { font-size: 48px; margin-bottom: 12px; }
+        .map-placeholder p { font-size: 14px; }
+
+        /* ── Scrollbar ─────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1a2836; }
+        ::-webkit-scrollbar-thumb { background: #2a3a4a; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3a4a5a; }
+
+        /* ── Responsive ────────────────────────────────── */
+        @media (max-width: 900px) {
+            .main-content { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>🚗 Fleet<span>Manager</span> — Telematics Dashboard</h1>
+        <div class="header-right">
+            <div class="live-indicator">
+                <div class="live-dot"></div>
+                LIVE
+            </div>
+            <span id="clock"></span>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="label">Total Vehicles</div>
+            <div class="value">{{ stats.total_vehicles }}</div>
+        </div>
+        <div class="stat-card transit">
+            <div class="label">In Transit</div>
+            <div class="value">{{ stats.active }}</div>
+        </div>
+        <div class="stat-card active">
+            <div class="label">Idle</div>
+            <div class="value">{{ stats.idle }}</div>
+        </div>
+        <div class="stat-card maintenance">
+            <div class="label">Maintenance</div>
+            <div class="value">{{ stats.maintenance }}</div>
+        </div>
+        <div class="stat-card alerts">
+            <div class="label">Active Alerts</div>
+            <div class="value">{{ stats.total_alerts }}</div>
+        </div>
+        <div class="stat-card alerts">
+            <div class="label">Critical Alerts</div>
+            <div class="value">{{ stats.critical_alerts }}</div>
+        </div>
+    </div>
+
+    <!-- Fleet Map -->
+    <div class="map-container" id="fleet-map">
+        <div class="map-placeholder">
+            <div class="icon">🗺️</div>
+            <p>Fleet Map — Integrate with Leaflet.js / Google Maps API</p>
+            <p style="margin-top:8px; font-size:12px; color:#3a5068;">
+                Vehicle markers will appear here with real-time GPS tracking
+            </p>
+        </div>
+    </div>
+
+    <!-- Main Content: Vehicles + Alerts -->
+    <div class="main-content">
+        <!-- Vehicle Table -->
+        <div class="panel">
+            <div class="panel-header">
+                Fleet Vehicles
+                <span class="badge">{{ vehicles|length }} vehicles</span>
+            </div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Vehicle</th>
+                            <th>Plate</th>
+                            <th>Status</th>
+                            <th>Speed</th>
+                            <th>Fuel</th>
+                            <th>Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in vehicles %}
+                        <tr>
+                            <td><strong>{{ v.year }} {{ v.make }} {{ v.model }}</strong></td>
+                            <td>{{ v.license_plate }}</td>
+                            <td>
+                                <span class="status-badge status-{{ v.status.value }}">
+                                    {{ v.status.value | replace("_", " ") }}
+                                </span>
+                            </td>
+                            <td>{{ "%.0f"|format(v.current_speed) }} km/h</td>
+                            <td>
+                                <div class="fuel-bar">
+                                    <div class="fuel-bar-fill {{ 'fuel-high' if v.current_fuel_level > 30 else ('fuel-medium' if v.current_fuel_level > 10 else 'fuel-low') }}"
+                                         style="width:{{ v.current_fuel_level }}%"></div>
+                                </div>
+                                {{ "%.0f"|format(v.current_fuel_level) }}%
+                            </td>
+                            <td>
+                                {% if v.current_latitude %}
+                                    {{ "%.4f"|format(v.current_latitude) }}, {{ "%.4f"|format(v.current_longitude) }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        {% if not vehicles %}
+                        <tr>
+                            <td colspan="6" style="text-align:center; color:#4a6177; padding:40px;">
+                                No vehicles registered. Use the API to add vehicles.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Alerts Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                Recent Alerts
+                <span class="badge" style="background: #e74c3c;">{{ recent_alerts|length }}</span>
+            </div>
+            <div class="alert-list">
+                {% for alert in recent_alerts %}
+                <div class="alert-item alert-{{ alert.severity.value }}">
+                    <div class="alert-icon">
+                        {% if alert.severity.value == 'critical' %}⛔
+                        {% elif alert.severity.value == 'warning' %}⚠️
+                        {% else %}ℹ️{% endif %}
+                    </div>
+                    <div class="alert-content">
+                        <div class="message">{{ alert.message }}</div>
+                        <div class="meta">
+                            Vehicle #{{ alert.vehicle_id }} ·
+                            {{ alert.created_at.strftime('%H:%M:%S') }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if not recent_alerts %}
+                <div style="text-align:center; color:#4a6177; padding:40px;">
+                    ✅ No active alerts
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Live clock
+        function updateClock() {
+            document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Auto-refresh dashboard every 10 seconds
+        setTimeout(() => location.reload(), 10000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+# Fleet Management System - Python Dependencies
+# ──────────────────────────────────────────────
+
+# Web Framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+jinja2==3.1.4
+
+# Database
+sqlalchemy==2.0.35
+pydantic-settings==2.5.0
+
+# HTTP Client (for simulator)
+requests==2.32.0
+
+# OBD-II Communication (install when connecting to real adapter)
+# obd==0.7.2
+
+# CAN Bus (install when using CAN hardware)
+# python-can==4.4.0
+
+# Serial Port (for GPS/OBD hardware)
+# pyserial==3.5
+
+# MQTT (for real-time pub/sub telematics)
+# paho-mqtt==2.1.0
+
+# Optional: Enhanced features
+# numpy==1.26.0          # For data analysis
+# pandas==2.2.0          # For report generation
+# scikit-learn==1.5.0    # For predictive maintenance ML
+# folium==0.17.0         # For map generation
