@@ -10,6 +10,14 @@ A comprehensive **Python-based fleet management platform** with real-time vehicl
 
 ---
 
+## 📸 Live Dashboard Preview
+
+![Fleet Management Dashboard](screenshots/dashboard.png)
+
+*Real-time fleet dashboard showing vehicle tracking, engine telemetry, fuel levels, and active alerts.*
+
+---
+
 ## 📌 About
 
 This system provides **end-to-end fleet management** for automotive companies, logistics operators, and transportation businesses. It connects directly to vehicles via **OBD-II, CAN bus, and GPS** to collect real-time telemetry data, enabling fleet operators to:
