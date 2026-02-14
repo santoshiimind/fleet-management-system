@@ -6,7 +6,7 @@ A comprehensive **Python-based fleet management platform** with real-time vehicl
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 ---
 
@@ -345,11 +345,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+Copyright 2026 **Santosh Kumar**
+
+This project is licensed under the **Apache License 2.0** — see the [LICENSE](LICENSE) and [NOTICE](NOTICE) files for details.
+
+**Attribution Required:** If you use, modify, or distribute this software, you must give appropriate credit to the original author. See the [NOTICE](NOTICE) file for attribution requirements.
 
 ---
 
 <p align="center">
-  Built with ❤️ for the Automotive Industry<br>
+  Built with ❤️ by <strong>Santosh Kumar</strong> for the Automotive Industry<br>
   <strong>Fleet Management System</strong> — Real-time Telematics for Smarter Fleets
 </p>
