@@ -1,0 +1,68 @@
+# ──────────────────────────────────────────────────────────────
+# Fleet Management System — Release Workflow
+# Manual trigger for creating versioned releases
+# ──────────────────────────────────────────────────────────────
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g., 1.0.0, 1.1.0)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark as pre-release?"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release v${{ inputs.version }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Update version in pyproject.toml
+        run: |
+          sed -i "s/^version = .*/version = \"${{ inputs.version }}\"/" pyproject.toml
+
+      - name: Update version in __init__.py
+        run: |
+          sed -i "s/__version__ = .*/__version__ = \"${{ inputs.version }}\"/" __init__.py
+
+      - name: Build package
+        run: |
+          pip install --upgrade build
+          python -m build
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml __init__.py
+          git commit -m "release: v${{ inputs.version }}" || echo "No changes"
+          git push
+
+      - name: Create and push tag
+        run: |
+          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
+
+      - name: Trigger CI/CD pipeline
+        run: |
+          echo "Tag pushed — CI/CD pipeline will handle the rest!"
+          echo "PyPI publish, Docker build, and GitHub Release will run automatically."

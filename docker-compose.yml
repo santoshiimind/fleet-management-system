@@ -1,0 +1,79 @@
+# ──────────────────────────────────────────────────────────────
+# Fleet Management System — Docker Compose (Production)
+# ──────────────────────────────────────────────────────────────
+# Usage:
+#   docker compose up -d                  # Start in background
+#   docker compose up --build             # Rebuild and start
+#   docker compose logs -f fleet-api      # View logs
+#   docker compose down                   # Stop all services
+# ──────────────────────────────────────────────────────────────
+
+services:
+  # ── Fleet Management API ─────────────────────────────────────
+  fleet-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: fleet-management-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - API_DEBUG=false
+      - API_SECRET_KEY=${API_SECRET_KEY:-change-this-in-production}
+      - DB_DB_URL=sqlite:///data/fleet.db
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # Telematics settings (override as needed)
+      - TELEM_TELEMETRY_INTERVAL=2.0
+      - TELEM_DATA_RETENTION_DAYS=90
+      # Alert thresholds
+      - ALERT_SPEED_LIMIT_WARNING=120
+      - ALERT_ENGINE_TEMP_WARNING=100
+      - ALERT_FUEL_LOW_WARNING=15
+    volumes:
+      - fleet-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; r=requests.get('http://localhost:8000/health'); exit(0 if r.json()['status']=='healthy' else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Telemetry Simulator (development/demo only) ─────────────
+  fleet-simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: fleet-simulator
+    profiles:
+      - demo                      # Only starts with: docker compose --profile demo up
+    depends_on:
+      fleet-api:
+        condition: service_healthy
+    command: ["python", "simulator.py"]
+    environment:
+      - FLEET_API_URL=http://fleet-api:8000
+    restart: "no"
+
+volumes:
+  fleet-data:
+    driver: local
+    name: fleet-management-data

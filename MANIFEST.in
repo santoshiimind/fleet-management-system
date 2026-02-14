@@ -1,0 +1,22 @@
+include LICENSE
+include NOTICE
+include README.md
+include requirements.txt
+include pyproject.toml
+
+recursive-include templates *.html
+recursive-include config *.py
+recursive-include models *.py
+recursive-include api *.py
+recursive-include telematics *.py
+recursive-include services *.py
+
+exclude simulator.py
+exclude test_api.py
+exclude capture_screenshot.py
+
+prune screenshots
+prune data
+prune __pycache__
+prune .git
+prune .venv

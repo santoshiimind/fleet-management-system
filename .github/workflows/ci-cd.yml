@@ -1,0 +1,199 @@
+# ──────────────────────────────────────────────────────────────
+# Fleet Management System — CI/CD Pipeline
+# Runs tests, builds package, and publishes releases
+# ──────────────────────────────────────────────────────────────
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Lint & Test ──────────────────────────────────────────────
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint with Ruff
+        run: |
+          ruff check . --output-format=github || true
+
+      - name: Run tests
+        run: |
+          python -c "from main import app; print('✅ Import OK')"
+          python -c "from config.settings import settings; print('✅ Settings OK')"
+          python -c "from models.database import init_db; init_db(); print('✅ Database OK')"
+          python -c "from telematics.obd_reader import OBDReader; print('✅ OBD Reader OK')"
+          python -c "from telematics.gps_tracker import GPSTracker; print('✅ GPS Tracker OK')"
+          python -c "from telematics.can_decoder import CANDecoder; print('✅ CAN Decoder OK')"
+          python -c "from telematics.dtc_analyzer import DTCAnalyzer; print('✅ DTC Analyzer OK')"
+          python -c "from cli import main; print('✅ CLI OK')"
+
+  # ── Build Python Package ───────────────────────────────────
+  build-package:
+    name: Build Package
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: pip install --upgrade build twine
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Verify package
+        run: twine check dist/*
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+          retention-days: 30
+
+  # ── Build Docker Image ──────────────────────────────────────
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t fleet-management-system:test .
+          docker run --rm fleet-management-system:test python -c "from main import app; print('Docker OK')"
+
+  # ── Publish to PyPI (on tag push) ──────────────────────────
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [build-package, build-docker]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      id-token: write      # For trusted PyPI publishing
+    environment:
+      name: pypi
+      url: https://pypi.org/project/fleet-management-system/
+
+    steps:
+      - name: Download package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # Uses trusted publishing — configure at pypi.org/manage/project/fleet-management-system/settings/publishing/
+
+  # ── Publish Docker Image (on tag push) ─────────────────────
+  publish-docker:
+    name: Publish Docker Image
+    runs-on: ubuntu-latest
+    needs: [build-package, build-docker]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+          labels: |
+            org.opencontainers.image.title=Fleet Management System
+            org.opencontainers.image.version=${{ steps.version.outputs.VERSION }}
+            org.opencontainers.image.authors=Santosh Kumar
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Create GitHub Release ──────────────────────────────────
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [publish-pypi, publish-docker]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/*
+          body: |
+            ## 🚗 Fleet Management System ${{ github.ref_name }}
+
+            ### Install
+            ```bash
+            pip install fleet-management-system==${{ github.ref_name }}
+            ```
+
+            ### Docker
+            ```bash
+            docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ```

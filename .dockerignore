@@ -1,0 +1,42 @@
+# ──────────────────────────────────────────────────────────────
+# Fleet Management System — Docker Ignore
+# ──────────────────────────────────────────────────────────────
+
+.git
+.gitignore
+.venv
+venv
+env
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist
+build
+.eggs
+
+# Data files (will be mounted as volume)
+data/
+
+# Development files
+screenshots/
+capture_screenshot.py
+test_api.py
+.env
+.env.production
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Documentation build
+docs/_build
+
+# CI
+.github

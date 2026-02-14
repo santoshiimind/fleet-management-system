@@ -1,0 +1,111 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel>=0.41.0"]
+build-backend = "setuptools.build_meta"
+
+# ── Project Metadata ─────────────────────────────────────────────
+[project]
+name = "fleet-management-system"
+version = "1.0.0"
+description = "Production-grade automotive fleet management platform with real-time telematics (OBD-II, CAN Bus, GPS)"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    {name = "Santosh Kumar", email = "santoshiimind@users.noreply.github.com"},
+]
+maintainers = [
+    {name = "Santosh Kumar", email = "santoshiimind@users.noreply.github.com"},
+]
+keywords = [
+    "fleet-management", "telematics", "automotive", "obd-ii", "can-bus",
+    "gps-tracking", "vehicle-tracking", "iot", "fastapi",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Manufacturing",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: System :: Monitoring",
+    "Framework :: FastAPI",
+]
+
+# ── Dependencies ─────────────────────────────────────────────────
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "jinja2>=3.1.4",
+    "sqlalchemy>=2.0.35",
+    "pydantic-settings>=2.5.0",
+    "requests>=2.32.0",
+]
+
+[project.optional-dependencies]
+# Hardware telematics adapters
+hardware = [
+    "obd>=0.7.2",
+    "python-can>=4.4.0",
+    "pyserial>=3.5",
+    "paho-mqtt>=2.1.0",
+]
+# Production server
+production = [
+    "gunicorn>=22.0.0",
+]
+# Development & testing
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "httpx>=0.27.0",
+    "coverage>=7.4.0",
+    "ruff>=0.5.0",
+    "pre-commit>=3.7.0",
+]
+# Data analytics
+analytics = [
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+]
+# All optional dependencies
+all = [
+    "fleet-management-system[hardware,production,dev,analytics]",
+]
+
+# ── Entry Points ─────────────────────────────────────────────────
+[project.scripts]
+fleet-management = "cli:main"
+
+[project.urls]
+Homepage = "https://github.com/santoshiimind/fleet-management-system"
+Documentation = "https://github.com/santoshiimind/fleet-management-system#readme"
+Repository = "https://github.com/santoshiimind/fleet-management-system"
+Issues = "https://github.com/santoshiimind/fleet-management-system/issues"
+Changelog = "https://github.com/santoshiimind/fleet-management-system/releases"
+
+# ── Package Discovery ────────────────────────────────────────────
+[tool.setuptools]
+packages = ["config", "models", "api", "telematics", "services"]
+py-modules = ["cli", "main", "__init__"]
+
+[tool.setuptools.package-data]
+"*" = ["templates/*.html", "templates/**/*.html", "*.json"]
+
+# ── Ruff (Linter & Formatter) ───────────────────────────────────
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+# ── Pytest ───────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
