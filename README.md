@@ -6,6 +6,10 @@ A comprehensive **Python-based fleet management platform** with real-time vehicl
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![PyPI](https://img.shields.io/pypi/v/fleet-management-system?color=brightgreen&logo=pypi&logoColor=white)](https://pypi.org/project/fleet-management-system/)
+[![Docker](https://img.shields.io/badge/Docker-GHCR-2496ED?logo=docker&logoColor=white)](https://github.com/santoshiimind/fleet-management-system/pkgs/container/fleet-management-system)
+[![Release](https://img.shields.io/github/v/release/santoshiimind/fleet-management-system?color=orange&logo=github)](https://github.com/santoshiimind/fleet-management-system/releases/tag/v1.0.0)
+[![CI/CD](https://img.shields.io/github/actions/workflow/status/santoshiimind/fleet-management-system/ci-cd.yml?label=CI%2FCD&logo=githubactions&logoColor=white)](https://github.com/santoshiimind/fleet-management-system/actions)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 ---
@@ -168,10 +172,10 @@ docker compose exec fleet-api python cli.py seed
 docker compose --profile demo up -d
 ```
 
-### Option B: pip Install
+### Option B: pip Install from [PyPI](https://pypi.org/project/fleet-management-system/)
 
 ```bash
-# Install as a Python package
+# Install as a Python package (live on PyPI!)
 pip install fleet-management-system
 
 # Seed sample data & start server
@@ -254,15 +258,18 @@ fleet-management version             # Show version info
 The project includes CI/CD pipelines that automatically:
 1. **Test** across Python 3.10–3.13 on every push
 2. **Build** Python package (wheel + sdist) and Docker image
-3. **Publish** to PyPI and GitHub Container Registry on tag push
+3. **Publish** to [PyPI](https://pypi.org/project/fleet-management-system/) and [GitHub Container Registry](https://github.com/santoshiimind/fleet-management-system/pkgs/container/fleet-management-system) on tag push
+4. **Create** [GitHub Release](https://github.com/santoshiimind/fleet-management-system/releases) with artifacts
 
 ```bash
 # Create a release (triggers full CI/CD → PyPI + Docker + GitHub Release)
-git tag v1.0.0
+git tag v1.1.0
 git push --tags
 ```
 
 Or use the manual **Release** workflow from GitHub Actions UI.
+
+> **📦 Current release:** [v1.0.0](https://github.com/santoshiimind/fleet-management-system/releases/tag/v1.0.0) — Available on [PyPI](https://pypi.org/project/fleet-management-system/) and [GHCR](https://github.com/santoshiimind/fleet-management-system/pkgs/container/fleet-management-system)
 
 ---
 
