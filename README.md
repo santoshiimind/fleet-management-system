@@ -99,8 +99,18 @@ Monitor electric vehicle fleets with battery level tracking (via fuel_level), ch
 ```
 FLEETMANAGMENT/
 ├── main.py                    # Application entry point
+├── cli.py                     # CLI tool (fleet-management command)
+├── pyproject.toml             # Python package configuration
+├── Dockerfile                 # Multi-stage production Docker image
+├── docker-compose.yml         # One-command deployment
+├── gunicorn_config.py         # Production ASGI server config
 ├── simulator.py               # Telemetry data simulator
 ├── requirements.txt           # Python dependencies
+├── .env.production            # Production environment template
+│
+├── .github/workflows/         # CI/CD Pipelines
+│   ├── ci-cd.yml              # Auto test, build, publish
+│   └── release.yml            # Manual release trigger
 │
 ├── config/
 │   └── settings.py            # Centralized configuration
@@ -139,26 +149,120 @@ FLEETMANAGMENT/
 
 ## 🚀 Quick Start
 
-### 1. Install Dependencies
+Choose your preferred deployment method:
+
+### Option A: Docker (Recommended for Production)
+
+```bash
+# Clone the repo
+git clone https://github.com/santoshiimind/fleet-management-system.git
+cd fleet-management-system
+
+# Start production server
+docker compose up -d
+
+# Seed sample data
+docker compose exec fleet-api python cli.py seed
+
+# Start with simulator (demo mode)
+docker compose --profile demo up -d
+```
+
+### Option B: pip Install
+
+```bash
+# Install as a Python package
+pip install fleet-management-system
+
+# Seed sample data & start server
+fleet-management seed
+fleet-management run
+
+# Or run in development mode with hot-reload
+fleet-management run --dev
+```
+
+### Option C: From Source
+
 ```bash
 cd FLEETMANAGMENT
 pip install -r requirements.txt
-```
-
-### 2. Start the Server (with sample data)
-```bash
 python main.py --seed
 ```
 
-### 3. Open the Dashboard
+### Open the Dashboard
 - **Dashboard:** http://localhost:8000/
 - **API Docs:** http://localhost:8000/docs
 - **Health Check:** http://localhost:8000/health
 
-### 4. Run the Simulator (separate terminal)
+### Run the Simulator (separate terminal)
 ```bash
 python simulator.py
 ```
+
+---
+
+## 🐳 Docker Deployment
+
+### Production
+
+```bash
+# Build and start
+docker compose up -d --build
+
+# View logs
+docker compose logs -f fleet-api
+
+# Check health
+docker compose ps
+
+# Stop
+docker compose down
+```
+
+### Environment Configuration
+
+Copy `.env.production` to `.env` and customize:
+
+```bash
+cp .env.production .env
+```
+
+Key settings:
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `API_PORT` | `8000` | Server port |
+| `API_SECRET_KEY` | — | Change in production! |
+| `GUNICORN_WORKERS` | `4` | Worker processes |
+| `DB_DB_URL` | `sqlite:///data/fleet.db` | Database URL |
+| `LOG_LEVEL` | `info` | Log verbosity |
+
+### CLI Commands
+
+```bash
+fleet-management run                 # Start production server
+fleet-management run --dev           # Dev mode with hot-reload
+fleet-management run --port 9000     # Custom port
+fleet-management seed                # Seed sample data
+fleet-management seed --force        # Clear & re-seed
+fleet-management check               # Health check running server
+fleet-management version             # Show version info
+```
+
+### Release & Publishing
+
+The project includes CI/CD pipelines that automatically:
+1. **Test** across Python 3.10–3.13 on every push
+2. **Build** Python package (wheel + sdist) and Docker image
+3. **Publish** to PyPI and GitHub Container Registry on tag push
+
+```bash
+# Create a release (triggers full CI/CD → PyPI + Docker + GitHub Release)
+git tag v1.0.0
+git push --tags
+```
+
+Or use the manual **Release** workflow from GitHub Actions UI.
 
 ---
 
@@ -302,7 +406,11 @@ pip install paho-mqtt    # MQTT for IoT messaging
 | OBD-II | python-obd |
 | CAN Bus | python-can |
 | GPS | pyserial + NMEA parser |
-| Server | Uvicorn (ASGI) |
+| Server (dev) | Uvicorn (ASGI) |
+| Server (prod) | Gunicorn + Uvicorn Workers |
+| Containerization | Docker + Docker Compose |
+| CI/CD | GitHub Actions |
+| Package | PyPI (pip installable) |
 
 ---
 
@@ -327,7 +435,10 @@ pip install paho-mqtt    # MQTT for IoT messaging
 - [ ] Integration with fuel card providers
 - [ ] OTA (Over-The-Air) firmware updates for telematics devices
 - [ ] REST API authentication (JWT/OAuth2)
-- [ ] Docker & Kubernetes deployment support
+- [x] Docker & Docker Compose production deployment
+- [x] PyPI package (pip installable)
+- [x] CI/CD pipeline (GitHub Actions)
+- [ ] Kubernetes (Helm chart) deployment
 
 ---
 
