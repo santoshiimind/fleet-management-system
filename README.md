@@ -146,7 +146,8 @@ FLEETMANAGMENT/
 │   └── dashboard.py           # Web dashboard
 │
 ├── templates/
-│   └── dashboard.html         # Fleet dashboard UI
+│   ├── dashboard.html         # Fleet dashboard UI
+│   └── fleet_map.html         # Leaflet.js live fleet map
 │
 └── data/                      # SQLite database (auto-created)
 ```
@@ -323,6 +324,15 @@ Real-time monitoring with configurable thresholds:
 
 ## 📡 API Endpoints
 
+### Dashboard
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET    | `/` | Main dashboard page |
+| GET    | `/map` | Live fleet map (Leaflet.js) |
+| GET    | `/api/v1/dashboard/fleet-map` | Vehicle locations (JSON) |
+| GET    | `/api/v1/dashboard/fleet-map/geojson` | Vehicle locations (GeoJSON) |
+| GET    | `/api/v1/dashboard/stats` | Fleet statistics |
+
 ### Vehicles
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -433,7 +443,7 @@ pip install paho-mqtt    # MQTT for IoT messaging
 
 ## 🗺️ Roadmap
 
-- [ ] Leaflet.js / Google Maps integration for live fleet map
+- [x] Leaflet.js live fleet map with real-time tracking
 - [ ] WebSocket support for real-time dashboard updates
 - [ ] Driver mobile app (React Native)
 - [ ] PDF report generation (daily/weekly fleet reports)

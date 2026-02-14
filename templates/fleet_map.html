@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Map — Live Vehicle Tracking</title>
+
+    <!-- Leaflet.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="" />
+
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f1923;
+            color: #e0e6ed;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Top Bar ─────────────────────────────────── */
+        .topbar {
+            background: linear-gradient(135deg, #1a2332 0%, #243447 100%);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2d9cdb;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+
+        .topbar h1 {
+            font-size: 18px;
+            color: #2d9cdb;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .topbar h1 span { color: #e0e6ed; font-weight: 300; }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 13px;
+        }
+
+        .back-btn {
+            background: rgba(45,156,219,0.15);
+            color: #2d9cdb;
+            border: 1px solid rgba(45,156,219,0.3);
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(45,156,219,0.25);
+            border-color: #2d9cdb;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .live-dot {
+            width: 8px; height: 8px;
+            background: #27ae60;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .status-text {
+            color: #6b8299;
+        }
+
+        /* ── Main Layout ─────────────────────────────── */
+        .content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── Sidebar / Vehicle List ──────────────────── */
+        .sidebar {
+            width: 320px;
+            background: #1a2836;
+            border-right: 1px solid #2a3a4a;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid #2a3a4a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h2 {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .vehicle-count {
+            background: #2d9cdb;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .search-box {
+            padding: 10px 16px;
+            border-bottom: 1px solid #2a3a4a;
+        }
+
+        .search-box input {
+            width: 100%;
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            color: #e0e6ed;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .search-box input:focus {
+            border-color: #2d9cdb;
+        }
+
+        .search-box input::placeholder { color: #4a6177; }
+
+        .filter-bar {
+            padding: 8px 16px;
+            border-bottom: 1px solid #2a3a4a;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #2a3a4a;
+            color: #8899aa;
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: rgba(45,156,219,0.15);
+            border-color: #2d9cdb;
+            color: #2d9cdb;
+        }
+
+        .filter-btn.active-green.active { background: rgba(39,174,96,0.15); border-color: #27ae60; color: #27ae60; }
+        .filter-btn.active-yellow.active { background: rgba(243,156,18,0.15); border-color: #f39c12; color: #f39c12; }
+        .filter-btn.active-red.active { background: rgba(231,76,60,0.15); border-color: #e74c3c; color: #e74c3c; }
+
+        .vehicle-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .vehicle-card {
+            padding: 12px 16px;
+            border-bottom: 1px solid #1e2d3d;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .vehicle-card:hover, .vehicle-card.selected {
+            background: rgba(45,156,219,0.08);
+        }
+
+        .vehicle-card.selected {
+            border-left: 3px solid #2d9cdb;
+        }
+
+        .vc-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .vc-name {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .vc-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .vc-status.in_transit { background: rgba(39,174,96,0.2); color: #27ae60; }
+        .vc-status.idle { background: rgba(108,117,125,0.2); color: #8899aa; }
+        .vc-status.active { background: rgba(39,174,96,0.2); color: #27ae60; }
+        .vc-status.maintenance { background: rgba(243,156,18,0.2); color: #f39c12; }
+        .vc-status.out_of_service { background: rgba(231,76,60,0.2); color: #e74c3c; }
+
+        .vc-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            font-size: 11px;
+            color: #6b8299;
+        }
+
+        .vc-details span { display: flex; align-items: center; gap: 4px; }
+
+        /* ── Map ─────────────────────────────────────── */
+        #map {
+            flex: 1;
+            background: #0f1923;
+        }
+
+        /* Leaflet popup dark theme */
+        .leaflet-popup-content-wrapper {
+            background: #1a2836 !important;
+            color: #e0e6ed !important;
+            border-radius: 10px !important;
+            border: 1px solid #2a3a4a !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+        }
+
+        .leaflet-popup-tip {
+            background: #1a2836 !important;
+            border: 1px solid #2a3a4a !important;
+        }
+
+        .leaflet-popup-close-button {
+            color: #6b8299 !important;
+        }
+
+        .popup-content h3 {
+            color: #2d9cdb;
+            font-size: 14px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #2a3a4a;
+            padding-bottom: 6px;
+        }
+
+        .popup-content .popup-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            font-size: 12px;
+        }
+
+        .popup-content .popup-row .label { color: #6b8299; }
+        .popup-content .popup-row .val { color: #e0e6ed; font-weight: 500; }
+
+        .popup-content .popup-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* ── Map Stats Overlay ───────────────────────── */
+        .map-stats {
+            position: absolute;
+            bottom: 24px;
+            left: 344px;
+            z-index: 800;
+            display: flex;
+            gap: 8px;
+        }
+
+        .map-stat {
+            background: rgba(26,40,54,0.92);
+            backdrop-filter: blur(10px);
+            border: 1px solid #2a3a4a;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .map-stat .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+        }
+
+        .dot-transit { background: #27ae60; }
+        .dot-idle { background: #8899aa; }
+        .dot-maintenance { background: #f39c12; }
+        .dot-alert { background: #e74c3c; }
+
+        /* ── Legend ───────────────────────────────────── */
+        .map-legend {
+            position: absolute;
+            top: 80px;
+            right: 16px;
+            z-index: 800;
+            background: rgba(26,40,54,0.92);
+            backdrop-filter: blur(10px);
+            border: 1px solid #2a3a4a;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 12px;
+        }
+
+        .map-legend h4 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6b8299;
+            margin-bottom: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .legend-marker {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        /* ── Custom Marker Styles ────────────────────── */
+        .vehicle-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            font-size: 14px;
+            transition: transform 0.3s;
+        }
+
+        .vehicle-marker:hover {
+            transform: scale(1.2);
+        }
+
+        .marker-transit { background: #27ae60; }
+        .marker-idle { background: #6c757d; }
+        .marker-active { background: #27ae60; }
+        .marker-maintenance { background: #f39c12; }
+        .marker-out_of_service { background: #e74c3c; }
+
+        /* ── Dark map tiles override ─────────────────── */
+        .leaflet-tile-pane { filter: brightness(0.85); }
+
+        .leaflet-control-zoom a {
+            background: #1a2836 !important;
+            color: #e0e6ed !important;
+            border-color: #2a3a4a !important;
+        }
+
+        .leaflet-control-zoom a:hover {
+            background: #243447 !important;
+        }
+
+        .leaflet-control-attribution {
+            background: rgba(26,40,54,0.8) !important;
+            color: #4a6177 !important;
+            font-size: 10px !important;
+        }
+
+        .leaflet-control-attribution a { color: #2d9cdb !important; }
+
+        /* ── Responsive ──────────────────────────────── */
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; height: 200px; }
+            .content { flex-direction: column; }
+            .map-stats { left: 16px; bottom: 16px; }
+        }
+
+        /* ── Scrollbar ───────────────────────────────── */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #1a2836; }
+        ::-webkit-scrollbar-thumb { background: #2a3a4a; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3a4a5a; }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="topbar">
+        <h1>🗺️ Fleet<span>Map</span> — Live Vehicle Tracking</h1>
+        <div class="topbar-right">
+            <a href="/" class="back-btn">← Dashboard</a>
+            <div class="live-indicator">
+                <div class="live-dot"></div>
+                LIVE
+            </div>
+            <span class="status-text" id="update-status">Loading...</span>
+            <span id="clock"></span>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>🚗 Vehicles</h2>
+                <span class="vehicle-count" id="vehicle-count">0</span>
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search vehicles, plates...">
+            </div>
+
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn active-green" data-filter="in_transit">🟢 Transit</button>
+                <button class="filter-btn" data-filter="idle">⚪ Idle</button>
+                <button class="filter-btn active-yellow" data-filter="maintenance">🟡 Maint</button>
+                <button class="filter-btn active-red" data-filter="out_of_service">🔴 OOS</button>
+            </div>
+
+            <div class="vehicle-list" id="vehicle-list">
+                <!-- Vehicle cards populated by JS -->
+            </div>
+        </div>
+
+        <!-- Leaflet Map -->
+        <div id="map"></div>
+    </div>
+
+    <!-- Map Stats Overlay -->
+    <div class="map-stats" id="map-stats">
+        <div class="map-stat"><div class="dot dot-transit"></div><span id="stat-transit">0</span> Transit</div>
+        <div class="map-stat"><div class="dot dot-idle"></div><span id="stat-idle">0</span> Idle</div>
+        <div class="map-stat"><div class="dot dot-maintenance"></div><span id="stat-maint">0</span> Maint</div>
+    </div>
+
+    <!-- Legend -->
+    <div class="map-legend">
+        <h4>Vehicle Status</h4>
+        <div class="legend-item"><div class="legend-marker" style="background:#27ae60;"></div> In Transit</div>
+        <div class="legend-item"><div class="legend-marker" style="background:#6c757d;"></div> Idle</div>
+        <div class="legend-item"><div class="legend-marker" style="background:#f39c12;"></div> Maintenance</div>
+        <div class="legend-item"><div class="legend-marker" style="background:#e74c3c;"></div> Out of Service</div>
+    </div>
+
+    <!-- Leaflet.js -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+
+    <!-- Leaflet MarkerCluster -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        // ────────────────────────────────────────────────
+        // Configuration
+        // ────────────────────────────────────────────────
+        const REFRESH_INTERVAL = 5000;   // 5 seconds
+        const API_URL = '/api/v1/dashboard/fleet-map';
+        const DEFAULT_CENTER = [28.6139, 77.2090];  // New Delhi (default)
+        const DEFAULT_ZOOM = 12;
+
+        // ────────────────────────────────────────────────
+        // Initialize Map
+        // ────────────────────────────────────────────────
+        const map = L.map('map', {
+            center: DEFAULT_CENTER,
+            zoom: DEFAULT_ZOOM,
+            zoomControl: true,
+            attributionControl: true
+        });
+
+        // Dark-themed tile layer (CartoDB Dark Matter)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Marker cluster group
+        const clusterGroup = L.markerClusterGroup({
+            maxClusterRadius: 40,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            iconCreateFunction: function(cluster) {
+                const count = cluster.getChildCount();
+                let size = 'small';
+                if (count > 10) size = 'medium';
+                if (count > 25) size = 'large';
+                return L.divIcon({
+                    html: `<div style="
+                        background: rgba(45,156,219,0.85);
+                        color: white;
+                        border-radius: 50%;
+                        width: ${size === 'large' ? 48 : size === 'medium' ? 40 : 32}px;
+                        height: ${size === 'large' ? 48 : size === 'medium' ? 40 : 32}px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        font-size: ${size === 'large' ? 16 : 13}px;
+                        border: 3px solid white;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+                    ">${count}</div>`,
+                    className: '',
+                    iconSize: [size === 'large' ? 48 : size === 'medium' ? 40 : 32,
+                               size === 'large' ? 48 : size === 'medium' ? 40 : 32]
+                });
+            }
+        });
+        map.addLayer(clusterGroup);
+
+        // ────────────────────────────────────────────────
+        // State
+        // ────────────────────────────────────────────────
+        let vehicles = [];
+        let markers = {};
+        let selectedVehicleId = null;
+        let activeFilter = 'all';
+        let searchQuery = '';
+
+        // ────────────────────────────────────────────────
+        // Marker Icons
+        // ────────────────────────────────────────────────
+        function createMarkerIcon(status) {
+            const colors = {
+                'in_transit': '#27ae60',
+                'active': '#27ae60',
+                'idle': '#6c757d',
+                'maintenance': '#f39c12',
+                'out_of_service': '#e74c3c'
+            };
+            const icons = {
+                'in_transit': '🚗',
+                'active': '🚗',
+                'idle': '🅿️',
+                'maintenance': '🔧',
+                'out_of_service': '⛔'
+            };
+            const color = colors[status] || '#6c757d';
+            const icon = icons[status] || '🚗';
+
+            return L.divIcon({
+                html: `<div class="vehicle-marker marker-${status}">${icon}</div>`,
+                className: '',
+                iconSize: [32, 32],
+                iconAnchor: [16, 16],
+                popupAnchor: [0, -20]
+            });
+        }
+
+        // ────────────────────────────────────────────────
+        // Popup Content
+        // ────────────────────────────────────────────────
+        function createPopupContent(v) {
+            const statusColors = {
+                'in_transit': 'rgba(39,174,96,0.2)', 'active': 'rgba(39,174,96,0.2)',
+                'idle': 'rgba(108,117,125,0.2)', 'maintenance': 'rgba(243,156,18,0.2)',
+                'out_of_service': 'rgba(231,76,60,0.2)'
+            };
+            const statusTextColors = {
+                'in_transit': '#27ae60', 'active': '#27ae60',
+                'idle': '#8899aa', 'maintenance': '#f39c12',
+                'out_of_service': '#e74c3c'
+            };
+
+            const fuelColor = v.fuel > 30 ? '#27ae60' : v.fuel > 10 ? '#f39c12' : '#e74c3c';
+            const lastUpdate = v.last_update ? new Date(v.last_update).toLocaleTimeString() : 'N/A';
+
+            return `
+                <div class="popup-content" style="min-width: 200px;">
+                    <h3>🚗 ${v.name}</h3>
+                    <div class="popup-row">
+                        <span class="label">Plate</span>
+                        <span class="val">${v.plate}</span>
+                    </div>
+                    <div class="popup-row">
+                        <span class="label">Status</span>
+                        <span class="popup-status" style="background:${statusColors[v.status]};color:${statusTextColors[v.status]}">
+                            ${v.status.replace('_', ' ')}
+                        </span>
+                    </div>
+                    <div class="popup-row">
+                        <span class="label">Speed</span>
+                        <span class="val">${v.speed ? v.speed.toFixed(0) + ' km/h' : '0 km/h'}</span>
+                    </div>
+                    <div class="popup-row">
+                        <span class="label">Fuel</span>
+                        <span class="val" style="color:${fuelColor}">${v.fuel ? v.fuel.toFixed(0) + '%' : 'N/A'}</span>
+                    </div>
+                    <div class="popup-row">
+                        <span class="label">Coordinates</span>
+                        <span class="val" style="font-size:11px">${v.lat.toFixed(5)}, ${v.lng.toFixed(5)}</span>
+                    </div>
+                    <div class="popup-row">
+                        <span class="label">Last Update</span>
+                        <span class="val">${lastUpdate}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ────────────────────────────────────────────────
+        // Fetch & Render
+        // ────────────────────────────────────────────────
+        async function fetchVehicles() {
+            try {
+                const res = await fetch(API_URL);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                vehicles = await res.json();
+                updateMap();
+                updateSidebar();
+                updateStats();
+                document.getElementById('update-status').textContent =
+                    `Updated ${new Date().toLocaleTimeString()}`;
+            } catch (err) {
+                console.error('Fetch error:', err);
+                document.getElementById('update-status').textContent = '⚠ Connection error';
+            }
+        }
+
+        function updateMap() {
+            const filtered = getFilteredVehicles();
+            const currentIds = new Set(filtered.map(v => v.id));
+
+            // Remove markers for vehicles no longer in filtered set
+            Object.keys(markers).forEach(id => {
+                if (!currentIds.has(parseInt(id))) {
+                    clusterGroup.removeLayer(markers[id]);
+                    delete markers[id];
+                }
+            });
+
+            // Add/update markers
+            filtered.forEach(v => {
+                if (!v.lat || !v.lng) return;
+
+                if (markers[v.id]) {
+                    // Update existing marker position (smooth)
+                    const marker = markers[v.id];
+                    const oldLatLng = marker.getLatLng();
+                    const newLatLng = L.latLng(v.lat, v.lng);
+
+                    // Only move if position changed
+                    if (oldLatLng.lat !== v.lat || oldLatLng.lng !== v.lng) {
+                        marker.setLatLng(newLatLng);
+                    }
+
+                    // Update icon if status changed
+                    marker.setIcon(createMarkerIcon(v.status));
+                    marker.setPopupContent(createPopupContent(v));
+                } else {
+                    // Create new marker
+                    const marker = L.marker([v.lat, v.lng], {
+                        icon: createMarkerIcon(v.status),
+                        title: `${v.name} (${v.plate})`
+                    });
+
+                    marker.bindPopup(createPopupContent(v), {
+                        maxWidth: 260,
+                        className: 'dark-popup'
+                    });
+
+                    marker.on('click', () => selectVehicle(v.id));
+
+                    clusterGroup.addLayer(marker);
+                    markers[v.id] = marker;
+                }
+            });
+
+            // Auto-fit bounds on first load
+            if (filtered.length > 0 && !window._initialFitDone) {
+                const bounds = L.latLngBounds(filtered
+                    .filter(v => v.lat && v.lng)
+                    .map(v => [v.lat, v.lng])
+                );
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+                }
+                window._initialFitDone = true;
+            }
+        }
+
+        // ────────────────────────────────────────────────
+        // Sidebar
+        // ────────────────────────────────────────────────
+        function updateSidebar() {
+            const filtered = getFilteredVehicles();
+            const list = document.getElementById('vehicle-list');
+            document.getElementById('vehicle-count').textContent = filtered.length;
+
+            list.innerHTML = filtered.map(v => `
+                <div class="vehicle-card ${selectedVehicleId === v.id ? 'selected' : ''}"
+                     onclick="selectVehicle(${v.id})" data-id="${v.id}">
+                    <div class="vc-top">
+                        <span class="vc-name">${v.name}</span>
+                        <span class="vc-status ${v.status}">${v.status.replace('_', ' ')}</span>
+                    </div>
+                    <div class="vc-details">
+                        <span>🔖 ${v.plate}</span>
+                        <span>🏎️ ${v.speed ? v.speed.toFixed(0) : '0'} km/h</span>
+                        <span>⛽ ${v.fuel ? v.fuel.toFixed(0) : '0'}%</span>
+                        <span>📍 ${v.lat ? v.lat.toFixed(4) + ', ' + v.lng.toFixed(4) : 'No GPS'}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            if (filtered.length === 0) {
+                list.innerHTML = `
+                    <div style="text-align:center; color:#4a6177; padding:40px;">
+                        No vehicles found
+                    </div>`;
+            }
+        }
+
+        function updateStats() {
+            const transit = vehicles.filter(v => v.status === 'in_transit' || v.status === 'active').length;
+            const idle = vehicles.filter(v => v.status === 'idle').length;
+            const maint = vehicles.filter(v => v.status === 'maintenance').length;
+
+            document.getElementById('stat-transit').textContent = transit;
+            document.getElementById('stat-idle').textContent = idle;
+            document.getElementById('stat-maint').textContent = maint;
+        }
+
+        // ────────────────────────────────────────────────
+        // Filtering & Search
+        // ────────────────────────────────────────────────
+        function getFilteredVehicles() {
+            let result = vehicles;
+
+            // Status filter
+            if (activeFilter !== 'all') {
+                result = result.filter(v => v.status === activeFilter);
+            }
+
+            // Search
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                result = result.filter(v =>
+                    v.name.toLowerCase().includes(q) ||
+                    v.plate.toLowerCase().includes(q)
+                );
+            }
+
+            return result;
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                activeFilter = btn.dataset.filter;
+
+                // Clear existing markers and re-render
+                clusterGroup.clearLayers();
+                markers = {};
+                updateMap();
+                updateSidebar();
+            });
+        });
+
+        // Search input
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            clusterGroup.clearLayers();
+            markers = {};
+            updateMap();
+            updateSidebar();
+        });
+
+        // ────────────────────────────────────────────────
+        // Select Vehicle
+        // ────────────────────────────────────────────────
+        function selectVehicle(id) {
+            selectedVehicleId = id;
+            const v = vehicles.find(v => v.id === id);
+
+            if (v && v.lat && v.lng) {
+                map.flyTo([v.lat, v.lng], 16, { duration: 1 });
+
+                // Open popup
+                if (markers[id]) {
+                    markers[id].openPopup();
+                }
+            }
+
+            // Update sidebar selection
+            document.querySelectorAll('.vehicle-card').forEach(card => {
+                card.classList.toggle('selected', parseInt(card.dataset.id) === id);
+            });
+        }
+
+        // ────────────────────────────────────────────────
+        // Clock
+        // ────────────────────────────────────────────────
+        function updateClock() {
+            document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // ────────────────────────────────────────────────
+        // Start
+        // ────────────────────────────────────────────────
+        fetchVehicles();
+        setInterval(fetchVehicles, REFRESH_INTERVAL);
+    </script>
+</body>
+</html>

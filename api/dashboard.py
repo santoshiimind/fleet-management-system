@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
 from datetime import datetime, timedelta
+import os
 
 from models.database import get_db
 from models.vehicle import Vehicle, VehicleStatus
@@ -15,7 +16,10 @@ from models.telemetry import TelemetryData
 from models.trip import Trip
 
 router = APIRouter(tags=["Dashboard"])
-templates = Jinja2Templates(directory="templates")
+
+# Resolve templates dir relative to this file's location
+_base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+templates = Jinja2Templates(directory=os.path.join(_base_dir, "templates"))
 
 
 @router.get("/")
@@ -54,6 +58,12 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     })
 
 
+@router.get("/map")
+def fleet_map(request: Request):
+    """Live fleet map page with Leaflet.js."""
+    return templates.TemplateResponse("fleet_map.html", {"request": request})
+
+
 @router.get("/api/v1/dashboard/fleet-map")
 def fleet_map_data(db: Session = Depends(get_db)):
     """Get all vehicle locations for the fleet map."""
@@ -76,6 +86,38 @@ def fleet_map_data(db: Session = Depends(get_db)):
         }
         for v in vehicles
     ]
+
+
+@router.get("/api/v1/dashboard/fleet-map/geojson")
+def fleet_map_geojson(db: Session = Depends(get_db)):
+    """Get vehicle locations as GeoJSON FeatureCollection."""
+    vehicles = (
+        db.query(Vehicle)
+        .filter(Vehicle.is_active == True, Vehicle.current_latitude.isnot(None))
+        .all()
+    )
+    features = []
+    for v in vehicles:
+        features.append({
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [v.current_longitude, v.current_latitude]
+            },
+            "properties": {
+                "id": v.id,
+                "name": f"{v.make} {v.model}",
+                "plate": v.license_plate,
+                "speed": v.current_speed,
+                "fuel": v.current_fuel_level,
+                "status": v.status.value,
+                "last_update": v.last_telemetry_at.isoformat() if v.last_telemetry_at else None,
+            }
+        })
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }
 
 
 @router.get("/api/v1/dashboard/stats")

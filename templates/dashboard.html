@@ -270,6 +270,7 @@
     <div class="header">
         <h1>🚗 Fleet<span>Manager</span> — Telematics Dashboard</h1>
         <div class="header-right">
+            <a href="/map" style="background:rgba(45,156,219,0.15);color:#2d9cdb;border:1px solid rgba(45,156,219,0.3);padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;transition:all 0.2s;">🗺️ Live Map</a>
             <div class="live-indicator">
                 <div class="live-dot"></div>
                 LIVE
@@ -306,16 +307,18 @@
         </div>
     </div>
 
-    <!-- Fleet Map -->
-    <div class="map-container" id="fleet-map">
-        <div class="map-placeholder">
-            <div class="icon">🗺️</div>
-            <p>Fleet Map — Integrate with Leaflet.js / Google Maps API</p>
-            <p style="margin-top:8px; font-size:12px; color:#3a5068;">
-                Vehicle markers will appear here with real-time GPS tracking
-            </p>
+    <!-- Fleet Map Preview -->
+    <a href="/map" style="text-decoration:none;">
+        <div class="map-container" id="fleet-map" style="cursor:pointer;transition:border-color 0.2s;">
+            <div class="map-placeholder">
+                <div class="icon">🗺️</div>
+                <p style="color:#2d9cdb;font-weight:600;">Click to Open Live Fleet Map</p>
+                <p style="margin-top:8px; font-size:12px; color:#3a5068;">
+                    Real-time vehicle tracking with Leaflet.js — search, filter, and monitor
+                </p>
+            </div>
         </div>
-    </div>
+    </a>
 
     <!-- Main Content: Vehicles + Alerts -->
     <div class="main-content">
